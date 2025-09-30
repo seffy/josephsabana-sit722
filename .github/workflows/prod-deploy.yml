@@ -29,8 +29,8 @@ jobs:
         run: |
           az acr import \
             --name ${{ env.REGISTRY }} \
-            --source $REGISTRY/$IMAGE:testing \
-            --image $IMAGE:$IMAGE_TAG \
+            --source ${{ env.REGISTRY }}/${{ env.IMAGE }}:testing \
+            --image ${{ env.IMAGE }}:${{ env.IMAGE_TAG }} \
             --force
 
       # Create if missing, else update image
@@ -39,9 +39,9 @@ jobs:
           az containerapp show -n $APP_NAME -g $RG >/dev/null 2>&1 || \
           az containerapp create -n $APP_NAME -g $RG --environment $ENV_NAME \
             --ingress external --target-port $PORT \
-            --image $REGISTRY/$IMAGE:$IMAGE_TAG \
-            --registry-server $REGISTRY \
+            --image ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.IMAGE_TAG }} \
+            --registry-server ${{ env.REGISTRY }} \
             --revision-mode single
 
           az containerapp update -n $APP_NAME -g $RG \
-            --image $REGISTRY/$IMAGE:$IMAGE_TAG
+            --image ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.IMAGE_TAG }}
