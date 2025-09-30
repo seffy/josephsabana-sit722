@@ -1,0 +1,57 @@
+name: SIT722 CI Pipeline
+
+on:
+  push:
+    branches:
+      - testing   # ✅ Trigger only on "testing" branch
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout repository
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Python for testing
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # Step 3: Install dependencies
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 4: Run Tests
+      - name: Run Tests
+        run: pytest --maxfail=1 --disable-warnings -q
+
+      # Step 5: Log in to Azure Container Registry
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to ACR
+        run: |
+          az acr login --name josephsabanaacr   # replace with your ACR name
+
+      # Step 6: Build Docker Images
+      - name: Build Docker Images
+        run: |
+          docker build -t josephsabanaacr.azurecr.io/product-service:latest ./backend/product_service
+          docker build -t josephsabanaacr.azurecr.io/order-service:latest ./backend/order_service
+          docker build -t josephsabanaacr.azurecr.io/customer-service:latest ./backend/customer_service
+          docker build -t josephsabanaacr.azurecr.io/frontend:latest ./frontend
+
+      # Step 7: Push Docker Images to ACR (only if tests pass)
+      - name: Push Docker Images
+        run: |
+          docker push josephsabanaacr.azurecr.io/product-service:latest
+          docker push josephsabanaacr.azurecr.io/order-service:latest
+          docker push josephsabanaacr.azurecr.io/customer-service:latest
+          docker push josephsabanaacr.azurecr.io/frontend:latest

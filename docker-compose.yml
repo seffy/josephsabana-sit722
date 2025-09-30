@@ -1,0 +1,168 @@
+services:
+  product_db:
+    image: postgres:15-alpine
+    container_name: product_db_container
+    restart: always
+    environment:
+      POSTGRES_DB: products
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - product_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d products"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  order_db:
+    image: postgres:15-alpine
+    container_name: order_db_container
+    restart: always
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - order_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d orders"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq_container
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  product_service:
+    build:
+      context: ./backend/product_service
+      dockerfile: Dockerfile
+    container_name: product_api_container
+    image: product-service:latest
+    restart: always
+    expose:
+      - "8000"
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_HOST: product_db
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      AZURE_STORAGE_ACCOUNT_NAME: ${AZURE_STORAGE_ACCOUNT_NAME}
+      AZURE_STORAGE_ACCOUNT_KEY: ${AZURE_STORAGE_ACCOUNT_KEY}
+      AZURE_STORAGE_CONTAINER_NAME: ${AZURE_STORAGE_CONTAINER_NAME}
+      AZURE_SAS_TOKEN_EXPIRY_HOURS: ${AZURE_SAS_TOKEN_EXPIRY_HOURS:-24}
+    depends_on:
+      product_db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    volumes:
+      - ./backend/product_service/app:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  order_service:
+    build:
+      context: ./backend/order_service
+      dockerfile: Dockerfile
+    container_name: order_api_container
+    image: order-service:latest
+    restart: always
+    expose:
+      - "8001"
+    ports:
+      - "8001:8000"
+    environment:
+      POSTGRES_HOST: order_db
+      PRODUCT_SERVICE_URL: http://product_service:8000
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+    depends_on:
+      order_db:
+        condition: service_healthy
+      product_service:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    volumes:
+      - ./backend/order_service/app:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  customer_db:
+    image: postgres:15-alpine
+    container_name: customer_db_container
+    restart: always
+    environment:
+      POSTGRES_DB: customers
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - customer_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d customers"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  customer_service:
+    build:
+      context: ./backend/customer_service
+      dockerfile: Dockerfile
+    container_name: customer_api_container
+    image: customer-service:latest
+    restart: always
+    expose:
+      - "8002"
+    ports:
+      - "8002:8000"
+    environment:
+      POSTGRES_HOST: customer_db
+    depends_on:
+      customer_db:
+        condition: service_healthy
+    volumes:
+      - ./backend/customer_service/app:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: product_order_frontend
+    image: frontend:latest
+    restart: always
+    ports:
+      - "3000:80"
+    environment:
+      - PRODUCT_API_URL=http://localhost:8000
+      - ORDER_API_URL=http://localhost:8001
+      - CUSTOMER_API_URL=http://localhost:8002
+    depends_on:
+      product_service:
+        condition: service_started
+      order_service:
+        condition: service_started
+      customer_service:
+        condition: service_started
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+
+volumes:
+  product_db_data:
+  order_db_data:
+  customer_db_data:
