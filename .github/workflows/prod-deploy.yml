@@ -28,7 +28,7 @@ jobs:
       - name: Retag testing image as main (in ACR)
         run: |
           az acr import \
-            --name ${{ env.REGISTRY%%.* }} \
+            --name ${{ env.REGISTRY }} \
             --source $REGISTRY/$IMAGE:testing \
             --image $IMAGE:$IMAGE_TAG \
             --force
