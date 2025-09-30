@@ -7,10 +7,12 @@ on:
 jobs:
   deploy_prod:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [product-service, order-service, customer-service, frontend]
     env:
       RG: ${{ secrets.AZ_RESOURCE_GROUP }}
       REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
-      IMAGE: ${{ secrets.IMAGE_NAME || 'app' }}
       APP_NAME: ${{ secrets.APP_NAME }}-prod
       ENV_NAME: ${{ secrets.PROD_ENV_NAME }}
       IMAGE_TAG: main
@@ -29,8 +31,8 @@ jobs:
         run: |
           az acr import \
             --name ${{ env.REGISTRY }} \
-            --source ${{ env.REGISTRY }}/${{ env.IMAGE }}:testing \
-            --image ${{ env.IMAGE }}:${{ env.IMAGE_TAG }} \
+            --source ${{ env.REGISTRY }}/${{ matrix.service }}:testing \
+            --image ${{ matrix.service }}:${{ env.IMAGE_TAG }} \
             --force
 
       # Create if missing, else update image
@@ -39,9 +41,9 @@ jobs:
           az containerapp show -n $APP_NAME -g $RG >/dev/null 2>&1 || \
           az containerapp create -n $APP_NAME -g $RG --environment $ENV_NAME \
             --ingress external --target-port $PORT \
-            --image ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.IMAGE_TAG }} \
+            --image ${{ env.REGISTRY }}/${{ matrix.service }}:${{ env.IMAGE_TAG }} \
             --registry-server ${{ env.REGISTRY }} \
             --revision-mode single
 
           az containerapp update -n $APP_NAME -g $RG \
-            --image ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ env.IMAGE_TAG }}
+            --image ${{ env.REGISTRY }}/${{ matrix.service }}:${{ env.IMAGE_TAG }}
