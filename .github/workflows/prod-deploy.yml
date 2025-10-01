@@ -7,7 +7,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      RG: josephsabana-rg   # change if your Azure resource group is differents
+      RG: josephsabana-rg   # change if your Azure resource group is different
       ACR_NAME: ${{ secrets.AZURE_CONTAINER_REGISTRY }}
       ACR_LOGIN_SERVER: ${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io
       IMAGE_TAG: main
