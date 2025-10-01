@@ -19,7 +19,7 @@ env:
   # ACR Login Server (e.g., myregistry.azurecr.io)
   # This needs to be set as a GitHub Repository Secret
   ACR_NAME: ${{ secrets.AZURE_CONTAINER_REGISTRY }}
-  ACR_LOGIN_SERVER: ${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io
+  ACR_LOGIN_SERVER: ${{ secrets.ACR_NAME }}.azurecr.io
   # Dynamically generate image tags based on Git SHA and GitHub Run ID
   # This provides unique, traceable tags for each image build
   IMAGE_TAG: ${{ github.sha }}-${{ github.run_id }}
@@ -49,11 +49,8 @@ jobs:
     # Build and push the frontend image with both 'latest' and unique tags for traceability
     - name: Build and Push Frontend Image (Apple Silicon compatible)
       run: |
-        docker buildx build --platform linux/amd64 \
-          -t ${{ env.ACR_LOGIN_SERVER }}/frontend:latest \
-          -t ${{ env.ACR_LOGIN_SERVER }}/frontend:${{ env.IMAGE_TAG }} \
-          ./frontend/ \
-          --push
+        docker build -t ${{ env.ACR_LOGIN_SERVER }}/frontend:latest ./frontend/
+        docker push ${{ env.ACR_LOGIN_SERVER }}/frontend:latest
 
     # Logout from Azure for security (runs even if image push fails)
     - name: Logout from Azure
