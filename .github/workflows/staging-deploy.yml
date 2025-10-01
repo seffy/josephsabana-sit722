@@ -1,0 +1,61 @@
+name: Staging — Create, Deploy, Smoke Test, Destroy
+
+on:
+  workflow_run:
+    workflows: ["CI (testing) — Test, Build & Push"]
+    types: [completed]
+    branches: [testing]
+
+jobs:
+  deploy_staging:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      SUBSCRIPTION_ID: ${{ secrets.AZ_SUBSCRIPTION_ID }}
+      RG: ${{ secrets.AZ_RESOURCE_GROUP }}
+      LOCATION: ${{ secrets.AZ_LOCATION }}
+      REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
+      IMAGE: ${{ secrets.IMAGE_NAME || 'app' }}
+      APP_NAME: ${{ secrets.APP_NAME }}-stg
+      ENV_NAME: stg-env-${{ github.run_id }}
+      IMAGE_TAG: testing
+      PORT: 8080
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Ensure Container Apps CLI
+        run: az extension add -n containerapp --upgrade
+
+      - name: Create staging env
+        run: az containerapp env create -n $ENV_NAME -g $RG -l $LOCATION
+
+      - name: Deploy app to staging
+        run: |
+          az containerapp create \
+            -n $APP_NAME -g $RG \
+            --environment $ENV_NAME \
+            --image $REGISTRY/$IMAGE:$IMAGE_TAG \
+            --registry-server $REGISTRY \
+            --ingress external --target-port $PORT \
+            --revision-mode single
+
+      - name: Get staging URL
+        id: geturl
+        run: |
+          URL=$(az containerapp show -n $APP_NAME -g $RG --query properties.configuration.ingress.fqdn -o tsv)
+          echo "url=https://$URL" >> $GITHUB_OUTPUT
+
+      - name: Smoke test
+        run: curl -fsSL ${{ steps.geturl.outputs.url }}
+
+      # Auto-destroy after smoke-test to keep it ephemeral
+      - name: Destroy staging app
+        if: always()
+        run: az containerapp delete -n $APP_NAME -g $RG -y
+      - name: Destroy staging env
+        if: always()
+        run: az containerapp env delete -n $ENV_NAME -g $RG -y
