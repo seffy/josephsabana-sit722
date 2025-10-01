@@ -14,9 +14,11 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: josephsabanaacr.azurecr.io/frontend:main
+        image: josephsabanaacr.azurecr.io/frontend-main:latest
         ports:
         - containerPort: 3000
+      imagePullSecrets:
+      - name: acr-secret
 ---
 apiVersion: v1
 kind: Service

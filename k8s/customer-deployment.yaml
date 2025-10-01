@@ -17,6 +17,8 @@ spec:
         image: josephsabanaacr.azurecr.io/customer_service:main
         ports:
         - containerPort: 8000
+      imagePullSecrets:
+      - name: acr-secret
 ---
 apiVersion: v1
 kind: Service
