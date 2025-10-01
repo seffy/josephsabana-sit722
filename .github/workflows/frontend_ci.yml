@@ -40,7 +40,7 @@ jobs:
 
     # Login to Azure Container Registry (ACR)
     - name: Login to Azure Container Registry
-      run: az acr login --name ${{ env.ACR_LOGIN_SERVER }}
+      run: az acr login --name ${{ secrets.ACR_LOGIN_SERVER }}
 
     # Build and Push multi-arch Docker image for Frontend (Apple Silicon compatible)
     - name: Set up Docker Buildx
