@@ -15,6 +15,10 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Login to ACR
+        run: |
+          az acr login --name ${{ secrets.ACR_NAME }}
+
       - name: Build & Push Docker Images
         run: |
           docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/product_service:main ./backend/product_service
