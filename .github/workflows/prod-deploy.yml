@@ -25,7 +25,7 @@ jobs:
         run: az extension add -n containerapp --upgrade --only-show-errors
 
       - name: Set APP_NAME
-        run: echo "APP_NAME=${{ matrix.service }}-app" >> $GITHUB_ENV
+        run: echo "APP_NAME=${{ matrix.service//_/-}}-app" >> $GITHUB_ENV
 
       - name: Create or Update Container App
         run: |
