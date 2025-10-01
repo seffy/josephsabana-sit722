@@ -24,7 +24,7 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Ensure Container Apps CLI
-        run: az extension add -n containerapp --upgrade
+        run: az extension add -n containerapp --upgrade --only-show-errors
 
       # Option A: keep a 'main' tag in ACR (retag inside ACR)
       - name: Retag testing image as main (in ACR)
