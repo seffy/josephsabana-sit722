@@ -1,4 +1,4 @@
-name: CD (Production Deploy)
+name: CD (Production Deploy on AKS)
 
 on:
   workflow_dispatch:
@@ -6,52 +6,33 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-      AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
-      ACR_NAME: ${{ secrets.ACR_NAME }}
-      ACR_LOGIN_SERVER: ${{ secrets.ACR_NAME }}.azurecr.io
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      IMAGE_TAG: main
-    strategy:
-      matrix:
-        service: [product_service, order_service, customer_service, frontend]
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: azure/login@v2
+      - name: Azure Login
+        uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Ensure Container Apps extension
-        run: az extension add -n containerapp --upgrade --only-show-errors
-
-      - name: Set APP_NAME
+      - name: Build & Push Docker Images
         run: |
-          SANITIZED=$(echo "${{ matrix.service }}" | tr '_' '-' | sed 's/--/-/g')
-          echo "APP_NAME=${SANITIZED}-app" >> $GITHUB_ENV
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/product_service:main ./backend/product_service
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/product_service:main
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/order_service:main ./backend/order_service
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/order_service:main
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/customer_service:main ./backend/customer_service
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/customer_service:main
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/frontend:main ./frontend
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/frontend:main
 
-      - name: Create or Update Container App
+      - name: Set AKS Context
         run: |
-          az containerapp up \
-            --name $APP_NAME \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --environment ${{ env.ACR_NAME }}-env \
-            --image ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ env.IMAGE_TAG }} \
-            --target-port 8000 \
-            --ingress external \
-            --registry-server ${{ env.ACR_LOGIN_SERVER }} \
-            --query properties.configuration.ingress.fqdn
+          az aks get-credentials --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --name ${{ secrets.AKS_CLUSTER_NAME }} --overwrite-existing
 
-      # - name: Assign ACR Pull Role
-      #   run: |
-      #     PRINCIPAL_ID=$(az containerapp show --name $APP_NAME --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query identity.principalId -o tsv)
-      #     az role assignment create \
-      #       --assignee $PRINCIPAL_ID \
-      #       --scope /subscriptions/${{ env.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ env.AZURE_RESOURCE_GROUP }}/providers/Microsoft.ContainerRegistry/registries/${{ env.ACR_NAME }} \
-      #       --role acrpull
-
-      - name: Restart Container App
+      - name: Deploy to AKS
         run: |
-          az containerapp update \
-            --name $APP_NAME \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }}
+          kubectl apply -f k8s/product-deployment.yaml
+          kubectl apply -f k8s/order-deployment.yaml
+          kubectl apply -f k8s/customer-deployment.yaml
+          kubectl apply -f k8s/frontend-deployment.yaml
