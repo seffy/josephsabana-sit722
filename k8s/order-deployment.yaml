@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: order-service
-        image: josephsabanaacr.azurecr.io/order_service:latest
+        image: josephsabanaacr.azurecr.io/order_service:main
         ports:
         - containerPort: 8000
       imagePullSecrets:

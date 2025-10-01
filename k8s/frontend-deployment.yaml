@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: josephsabanaacr.azurecr.io/frontend-main:latest
+        image: josephsabanaacr.azurecr.io/frontend:main
         ports:
         - containerPort: 3000
       imagePullSecrets:
