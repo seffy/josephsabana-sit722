@@ -1,27 +1,12 @@
-# week09/example-3/docker-compose.yml
+# week08/docker-compose.yml
 
 version: "3.8"
 
 services:
-  prometheus:
-    image: prom/prometheus:v2.45.0
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
-    command: --config.file=/etc/prometheus/prometheus.yml --web.enable-remote-write-receiver --web.enable-lifecycle # Standard command
-    ports:
-      - "9090:9090"
-    depends_on:
-      product_service:
-        condition: service_started
-      order_service:
-        condition: service_started
-    restart: unless-stopped
-
   product_db:
     image: postgres:15-alpine
     container_name: product_db_container
-    restart: unless-stopped
+    restart: always
     environment:
       POSTGRES_DB: products
       POSTGRES_USER: postgres
@@ -40,7 +25,7 @@ services:
   order_db:
     image: postgres:15-alpine
     container_name: order_db_container
-    restart: unless-stopped
+    restart: always
     environment:
       POSTGRES_DB: orders
       POSTGRES_USER: postgres
@@ -48,6 +33,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
+      # Persistent volume for Order Service database data
       - order_db_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d orders"]
@@ -61,34 +47,35 @@ services:
       context: ./backend/product_service
       dockerfile: Dockerfile
     container_name: product_api_container
-    image: week09_example02_product_service:latest
-    restart: unless-stopped
+    image: week102Dproduct-service:latest
+    restart: always
     ports:
       - "8000:8000"
     environment:
-      POSTGRES_HOST: product_db
+      POSTGRES_HOST: product_db # Connects to the 'product_db' service within Docker network
       AZURE_STORAGE_ACCOUNT_NAME: ${AZURE_STORAGE_ACCOUNT_NAME}
       AZURE_STORAGE_ACCOUNT_KEY: ${AZURE_STORAGE_ACCOUNT_KEY}
       AZURE_STORAGE_CONTAINER_NAME: ${AZURE_STORAGE_CONTAINER_NAME}
       AZURE_SAS_TOKEN_EXPIRY_HOURS: ${AZURE_SAS_TOKEN_EXPIRY_HOURS}
     depends_on:
       product_db:
-        condition: service_healthy
+        condition: service_healthy # Ensure product_db is healthy before starting
     volumes:
       - ./backend/product_service/app:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
 
+  # Order Microservice (FastAPI)
   order_service:
     build:
       context: ./backend/order_service
       dockerfile: Dockerfile
-    image: week09_example02_order_service:latest
+    image: week102Dorder-service:latest
     container_name: order_api_container
-    restart: unless-stopped
+    restart: always
     ports:
       - "8001:8000"
     environment:
-      POSTGRES_HOST: order_db
+      POSTGRES_HOST: order_db # Connects to the 'order_db' service within Docker network
       PRODUCT_SERVICE_URL: http://product_service:8000
     depends_on:
       order_db:
@@ -99,23 +86,26 @@ services:
       - ./backend/order_service/app:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
 
+  # Frontend Service (Simple HTML/JS served by Nginx)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    image: week09_example02_frontend:latest
+    image: week102Dfrontend:latest
     container_name: product_order_frontend
-    restart: unless-stopped
+    restart: always
+    # Frontend connects to host ports, which are mapped to container ports
     ports:
-      - "3001:80"
+      - "3000:80" # Map container port 80 (Nginx default) to host port 3000
     depends_on:
       product_service:
         condition: service_started
       order_service:
         condition: service_started
     volumes:
-      - ./frontend:/usr/share/nginx/html
+      - ./frontend:/usr/share/nginx/html # Mount frontend files directly
 
+# Named volumes for data persistence for each database
 volumes:
-  product_db_data:
-  order_db_data:
+  product_db_data: # Data for the Product Service's PostgreSQL database
+  order_db_data: # Data for the Order Service's PostgreSQL database
