@@ -21,14 +21,10 @@ jobs:
 
       - name: Build & Push Docker Images
         run: |
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/product_service:main ./backend/product_service
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/product_service:main
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/order_service:main ./backend/order_service
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/order_service:main
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/customer_service:main ./backend/customer_service
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/customer_service:main
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/frontend:main ./frontend
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/frontend:main
+          docker buildx build --platform linux/amd64 -t ${{ secrets.ACR_LOGIN_SERVER }}/product_service:main ./backend/product_service --push
+          docker buildx build --platform linux/amd64 -t ${{ secrets.ACR_LOGIN_SERVER }}/order_service:main ./backend/order_service --push
+          docker buildx build --platform linux/amd64 -t ${{ secrets.ACR_LOGIN_SERVER }}/customer_service:main ./backend/customer_service --push
+          docker buildx build --platform linux/amd64 -t ${{ secrets.ACR_LOGIN_SERVER }}/frontend:main ./frontend --push
 
       - name: Set AKS Context
         run: |

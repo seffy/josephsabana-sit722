@@ -38,10 +38,10 @@ jobs:
             BUILD_PATH=./backend/${{ matrix.service }}
           fi
 
-          docker build -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }} $BUILD_PATH
-          docker tag ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }} ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:main
-          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }}
-          docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:main
+          docker buildx build --platform linux/amd64 \
+            -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }} \
+            -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:main \
+            $BUILD_PATH --push
 
       - name: Set AKS Context
         run: |
