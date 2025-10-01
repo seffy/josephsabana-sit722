@@ -1,0 +1,43 @@
+name: CI (main) — Build & Push
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build_push:
+    runs-on: ubuntu-latest
+    env:
+      ACR_NAME: ${{ secrets.AZURE_CONTAINER_REGISTRY }}
+      ACR_LOGIN_SERVER: ${{ secrets.AZURE_CONTAINER_REGISTRY }}.azurecr.io
+    strategy:
+      matrix:
+        service: [product_service, order_service, customer_service, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker login to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build & Push Service
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ github.workspace }}/backend/${{ matrix.service }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }}
+            ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:main
