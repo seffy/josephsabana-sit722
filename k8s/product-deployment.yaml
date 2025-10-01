@@ -14,9 +14,26 @@ spec:
     spec:
       containers:
       - name: product-service
-        image: josephsabanaacr.azurecr.io/product_service:main
+        image: josephsabanaacr.azurecr.io/product_service:latest
         ports:
         - containerPort: 8000
+        env:
+        - name: DATABASE_HOST
+          value: product-db
+        - name: DATABASE_PORT
+          value: "5432"
+        - name: DATABASE_USER
+          valueFrom:
+            secretKeyRef:
+              name: product-db-secret
+              key: username
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: product-db-secret
+              key: password
+        - name: DATABASE_NAME
+          value: productdb
         envFrom:
         - secretRef:
             name: azure-storage-secret

@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: customer-service
-        image: josephsabanaacr.azurecr.io/customer_service:main
+        image: josephsabanaacr.azurecr.io/customer_service:latest
         ports:
         - containerPort: 8000
       imagePullSecrets:
