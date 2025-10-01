@@ -26,15 +26,6 @@ jobs:
       - name: Ensure Container Apps CLI
         run: az extension add -n containerapp --upgrade --only-show-errors
 
-      # Option A: keep a 'main' tag in ACR (retag inside ACR)
-      - name: Retag testing image as main (in ACR)
-        run: |
-          az acr import \
-            --name ${{ env.REGISTRY }} \
-            --source ${{ env.REGISTRY }}/${{ matrix.service }}:testing \
-            --image ${{ matrix.service }}:${{ env.IMAGE_TAG }} \
-            --force
-
       # Create if missing, else update image
       - name: Create or update prod app
         run: |
