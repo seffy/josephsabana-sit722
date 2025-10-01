@@ -42,7 +42,13 @@ jobs:
 
       - name: Build & Push Service
         run: |
-          docker build -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }} ./backend/${{ matrix.service }}
+          if [ "${{ matrix.service }}" = "frontend" ]; then
+            BUILD_PATH=./frontend
+          else
+            BUILD_PATH=./backend/${{ matrix.service }}
+          fi
+
+          docker build -t ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }} $BUILD_PATH
           docker tag ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }} ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:testing
           docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:${{ github.sha }}
           docker push ${{ env.ACR_LOGIN_SERVER }}/${{ matrix.service }}:testing
