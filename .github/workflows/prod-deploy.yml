@@ -42,13 +42,13 @@ jobs:
             --registry-server ${{ env.ACR_LOGIN_SERVER }} \
             --query properties.configuration.ingress.fqdn
 
-      - name: Assign ACR Pull Role
-        run: |
-          PRINCIPAL_ID=$(az containerapp show --name $APP_NAME --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query identity.principalId -o tsv)
-          az role assignment create \
-            --assignee $PRINCIPAL_ID \
-            --scope /subscriptions/${{ env.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ env.AZURE_RESOURCE_GROUP }}/providers/Microsoft.ContainerRegistry/registries/${{ env.ACR_NAME }} \
-            --role acrpull
+      # - name: Assign ACR Pull Role
+      #   run: |
+      #     PRINCIPAL_ID=$(az containerapp show --name $APP_NAME --resource-group ${{ env.AZURE_RESOURCE_GROUP }} --query identity.principalId -o tsv)
+      #     az role assignment create \
+      #       --assignee $PRINCIPAL_ID \
+      #       --scope /subscriptions/${{ env.AZURE_SUBSCRIPTION_ID }}/resourceGroups/${{ env.AZURE_RESOURCE_GROUP }}/providers/Microsoft.ContainerRegistry/registries/${{ env.ACR_NAME }} \
+      #       --role acrpull
 
       - name: Restart Container App
         run: |
